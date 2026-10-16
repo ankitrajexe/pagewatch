@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Monitor — PageWatch{% endblock %}
+
+{% block content %}
+<article style="max-width: 600px; margin: 2rem auto;">
+    <header>
+        <h2 style="color: #e74c3c;">Confirm Deletion</h2>
+    </header>
+
+    <p>Are you sure you want to permanently delete monitor <strong>"{{ monitor.name }}"</strong>?</p>
+    <p>Target URL: <code>{{ monitor.url }}</code></p>
+    <p><small style="color: #7f8c8d;">This will remove the monitor configuration and all associated snapshots and logs.</small></p>
+
+    <form method="POST" action="/monitors/{{ monitor.id }}/delete" style="margin-top: 1.5rem;">
+        <div class="grid">
+            <button type="submit" style="background-color: #e74c3c; border-color: #e74c3c;">Yes, Delete Monitor</button>
+            <a href="/" role="button" class="secondary outline">Cancel</a>
+        </div>
+    </form>
+</article>
+{% endblock %}

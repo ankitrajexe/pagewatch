@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Snapshots — {{ monitor.name }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Styling for difflib.HtmlDiff table */
+    table.diff {
+        width: 100%;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        margin-bottom: 2rem;
+    }
+    table.diff td, table.diff th {
+        padding: 4px 8px;
+        vertical-align: top;
+        border: 1px solid var(--pico-muted-border-color, #e5e7eb);
+    }
+    table.diff th {
+        background-color: var(--pico-card-background-color, #f3f4f6);
+        font-weight: bold;
+    }
+    /* Side-by-side diff colors (Light mode) */
+    .diff_add {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+    }
+    .diff_sub {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+    }
+    .diff_chg {
+        background-color: #fff3cd !important;
+        color: #856404 !important;
+    }
+    .diff_next {
+        background-color: var(--pico-card-background-color, #f3f4f6);
+        color: #6b7280;
+        text-align: right;
+        font-size: 0.75rem;
+    }
+
+    /* Dark mode overrides for side-by-side diff table */
+    @media (prefers-color-scheme: dark) {
+        .diff_add {
+            background-color: #14532d !important;
+            color: #86efac !important;
+        }
+        .diff_sub {
+            background-color: #7f1d1d !important;
+            color: #fca5a5 !important;
+        }
+        .diff_chg {
+            background-color: #713f12 !important;
+            color: #fde047 !important;
+        }
+        .diff_next {
+            background-color: #1f2937;
+            color: #9ca3af;
+        }
+    }
+    [data-theme="dark"] .diff_add {
+        background-color: #14532d !important;
+        color: #86efac !important;
+    }
+    [data-theme="dark"] .diff_sub {
+        background-color: #7f1d1d !important;
+        color: #fca5a5 !important;
+    }
+    [data-theme="dark"] .diff_chg {
+        background-color: #713f12 !important;
+        color: #fde047 !important;
+    }
+    [data-theme="dark"] .diff_next {
+        background-color: #1f2937;
+        color: #9ca3af;
+    }
+
+    /* Unified text diff lines */
+    .unified-diff-box {
+        background-color: var(--pico-card-background-color, #f8f9fa);
+        border: 1px solid var(--pico-muted-border-color, #e5e7eb);
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+        overflow-x: auto;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    .diff-line-added {
+        background-color: #d4edda;
+        color: #155724;
+        display: block;
+        padding: 1px 6px;
+        border-radius: 2px;
+    }
+    .diff-line-removed {
+        background-color: #f8d7da;
+        color: #721c24;
+        display: block;
+        padding: 1px 6px;
+        border-radius: 2px;
+    }
+    .diff-line-same {
+        color: var(--pico-color, #374151);
+        display: block;
+        padding: 1px 6px;
+    }
+    @media (prefers-color-scheme: dark) {
+        .diff-line-added { background-color: #14532d; color: #86efac; }
+        .diff-line-removed { background-color: #7f1d1d; color: #fca5a5; }
+        .diff-line-same { color: #d1d5db; }
+    }
+    [data-theme="dark"] .diff-line-added { background-color: #14532d; color: #86efac; }
+    [data-theme="dark"] .diff-line-removed { background-color: #7f1d1d; color: #fca5a5; }
+    [data-theme="dark"] .diff-line-same { color: #d1d5db; }
+
+    .screenshot-frame {
+        width: 100%;
+        border: 1px solid var(--pico-muted-border-color, #ccc);
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        display: block;
+    }
+</style>
+
+<div style="margin-bottom: 1.5rem;">
+    <p style="margin-bottom: 0.5rem;"><a href="/monitors/{{ monitor.id }}">&larr; Back to {{ monitor.name }}</a></p>
+    <h1>Snapshot Comparison</h1>
+    <p style="color: #7f8c8d;">Compare any two snapshots captured for <strong>{{ monitor.name }}</strong> (<code>{{ monitor.url }}</code>).</p>
+</div>
+
+{% if error_message %}
+<article class="error-box">
+    <strong>Notice:</strong> {{ error_message }}
+</article>
+{% endif %}
+
+{% if all_snapshots|length >= 2 %}
+<!-- Snapshot Picker Form (Plain GET form, zero JS) -->
+<article style="padding: 1.25rem; margin-bottom: 2rem;">
+    <form method="GET" action="/monitors/{{ monitor.id }}/compare" style="margin: 0;">
+        <div class="grid" style="align-items: flex-end;">
+            <div>
+                <label for="select-a"><strong>Older Version (A):</strong></label>
+                <select id="select-a" name="a">
+                    {% for s in all_snapshots %}
+                    <option value="{{ s.id }}" {% if snap_a and s.id == snap_a.id %}selected{% endif %}>
+                        #{{ s.id }} — {{ s.taken_at|time_ago }} ({{ s.taken_at[:19] }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="select-b"><strong>Newer Version (B):</strong></label>
+                <select id="select-b" name="b">
+                    {% for s in all_snapshots %}
+                    <option value="{{ s.id }}" {% if snap_b and s.id == snap_b.id %}selected{% endif %}>
+                        #{{ s.id }} — {{ s.taken_at|time_ago }} ({{ s.taken_at[:19] }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <button type="submit" style="width: 100%;">Compare</button>
+            </div>
+        </div>
+    </form>
+</article>
+{% endif %}
+
+{% if snap_a and snap_b and not error_message %}
+<!-- Metrics Summary Card -->
+<article style="padding: 1rem 1.25rem; margin-bottom: 2rem; background-color: var(--pico-card-background-color, #f8f9fa); border-left: 5px solid #3498db;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h4 style="margin-bottom: 0.25rem;">Comparing Snapshot #{{ snap_a.id }} vs #{{ snap_b.id }}</h4>
+            <small style="color: #7f8c8d;">
+                #{{ snap_a.id }} ({{ snap_a.taken_at|time_ago }}) &rarr; #{{ snap_b.id }} ({{ snap_b.taken_at|time_ago }})
+            </small>
+        </div>
+        <div>
+            <span style="display: inline-block; padding: 4px 10px; background-color: #2ecc71; color: #fff; border-radius: 4px; font-weight: bold; margin-right: 0.5rem;">
+                +{{ added_count }} lines
+            </span>
+            <span style="display: inline-block; padding: 4px 10px; background-color: #e74c3c; color: #fff; border-radius: 4px; font-weight: bold; margin-right: 0.5rem;">
+                -{{ removed_count }} lines
+            </span>
+            <span style="display: inline-block; padding: 4px 10px; background-color: #34495e; color: #fff; border-radius: 4px; font-weight: bold;">
+                {{ changed_percent }}% visual change
+            </span>
+        </div>
+    </div>
+</article>
+
+<!-- SECTION 4: Highlighted Visual Diff Screenshot -->
+<section style="margin-bottom: 3rem;">
+    <h3>1. Highlighted Visual Diff</h3>
+    <p>Red rectangles highlight detected visual changes on the newer screenshot. <strong>{{ changed_percent }} percent of the page changed</strong>.</p>
+    {% if image_error %}
+    <p class="error-box">{{ image_error }}</p>
+    {% elif diff_filename %}
+    <div style="text-align: center; background-color: #0000000a; padding: 1rem; border-radius: 6px;">
+        <img src="/data/diffs/{{ diff_filename }}"
+             alt="Visual Difference Screenshot"
+             class="screenshot-frame"
+             style="max-width: 100%; border: 3px solid #e74c3c;">
+    </div>
+    {% endif %}
+</section>
+
+<!-- SECTION 3: Screenshots Side-by-Side -->
+<section style="margin-bottom: 3rem;">
+    <h3>2. Screenshots Side-by-Side</h3>
+    <div class="grid">
+        <div>
+            <h4>Older Version (#{{ snap_a.id }})</h4>
+            <p><small style="color: #7f8c8d;">Captured: {{ snap_a.taken_at[:19] }}</small></p>
+            <img src="/data/screenshots/{{ old_screenshot }}"
+                 alt="Screenshot #{{ snap_a.id }}"
+                 class="screenshot-frame">
+        </div>
+        <div>
+            <h4>Newer Version (#{{ snap_b.id }})</h4>
+            <p><small style="color: #7f8c8d;">Captured: {{ snap_b.taken_at[:19] }}</small></p>
+            <img src="/data/screenshots/{{ new_screenshot }}"
+                 alt="Screenshot #{{ snap_b.id }}"
+                 class="screenshot-frame">
+        </div>
+    </div>
+</section>
+
+<!-- SECTION 1: Unified Coloured Text Diff -->
+<section style="margin-bottom: 3rem;">
+    <h3>3. Unified Text Diff</h3>
+    <p>Lines added are shown in green (<code>+</code>); lines removed are shown in red (<code>-</code>).</p>
+    {% if text_error %}
+    <p class="error-box">{{ text_error }}</p>
+    {% elif not unified_diff %}
+    <p><em>No text differences between these two snapshots.</em></p>
+    {% else %}
+    <div class="unified-diff-box">
+        {% for kind, line in unified_diff %}
+            {% if kind == "added" %}
+            <span class="diff-line-added">+ {{ line }}</span>
+            {% elif kind == "removed" %}
+            <span class="diff-line-removed">- {{ line }}</span>
+            {% else %}
+            <span class="diff-line-same">  {{ line }}</span>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+
+<!-- SECTION 2: Side-by-Side Text Diff Table -->
+<section style="margin-bottom: 3rem;">
+    <h3>4. Side-by-Side Text Diff</h3>
+    <p>Displays older text on the left and newer text on the right with 3 lines of surrounding context.</p>
+    {% if text_error %}
+    <p class="error-box">{{ text_error }}</p>
+    {% elif side_by_side %}
+    <div class="overflow-auto" style="border: 1px solid var(--pico-muted-border-color, #e5e7eb); border-radius: 6px;">
+        {{ side_by_side|safe }}
+    </div>
+    {% else %}
+    <p><em>No text differences to display.</em></p>
+    {% endif %}
+</section>
+
+{% endif %}
+{% endblock %}

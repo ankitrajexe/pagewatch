@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Preparing Visual Picker — {{ monitor.name }}{% endblock %}
+
+{% block extra_head %}
+<meta http-equiv="refresh" content="3">
+{% endblock %}
+
+{% block content %}
+<article style="text-align: center; padding: 3rem 1rem; max-width: 650px; margin: 2rem auto;">
+    <h2>Preparing page preview...</h2>
+    <p style="color: #7f8c8d; font-size: 1.05rem; margin-bottom: 1.5rem;">
+        The background worker is rendering <strong>{{ monitor.url }}</strong> in a headless browser to measure page regions.
+    </p>
+    <div style="margin-bottom: 1.5rem;">
+        <progress></progress>
+    </div>
+    <p style="margin-bottom: 2rem;">
+        <small style="color: #888;">Preparing page... refresh in a few seconds (auto-refreshing every 3 seconds)</small>
+    </p>
+    <div>
+        <a href="/monitors/{{ monitor.id }}" role="button" class="outline secondary">Cancel and return to monitor</a>
+    </div>
+</article>
+{% endblock %}

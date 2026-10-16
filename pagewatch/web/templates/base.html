@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PageWatch{% endblock %}</title>
+    {% block extra_head %}{% endblock %}
+
+    <!-- Pico.css from CDN — gives us nice styling with zero custom CSS -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .dot-ok { background-color: #2ecc71; }
+        .dot-error { background-color: #e74c3c; }
+        .dot-blocked { background-color: #e67e22; }
+        .dot-pending { background-color: #95a5a6; }
+        .badge-noisy {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background-color: #f39c12;
+            color: #ffffff;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .error-box {
+            background-color: #fde8e8;
+            color: #c81e1e;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        }
+        .actions-group a, .actions-group button {
+            display: inline-block;
+            margin-right: 0.25rem;
+            margin-bottom: 0.25rem;
+            padding: 0.25rem 0.6rem;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation bar -->
+    <nav class="container">
+        <ul>
+            <li><a href="/"><strong>PageWatch</strong></a></li>
+        </ul>
+        <ul>
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/monitors/add">Add Monitor</a></li>
+        </ul>
+    </nav>
+
+    <!-- Flash messages container -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <article style="padding: 0.75rem 1rem; margin-bottom: 1.25rem; border-left: 4px solid #2ecc71;">
+                <strong>{{ message }}</strong>
+              </article>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main page content — each page fills this block -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="container">
+        <small>PageWatch — Website Change Detector</small>
+    </footer>
+</body>
+</html>

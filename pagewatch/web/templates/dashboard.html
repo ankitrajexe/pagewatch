@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — PageWatch{% endblock %}
+
+{% block content %}
+<header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+        <h1 style="margin-bottom: 0.25rem;">Monitors</h1>
+        <p style="margin-bottom: 0;">Total active monitors: <strong>{{ monitor_count }}</strong></p>
+    </div>
+    <div>
+        <a href="/monitors/add" role="button">+ Add Monitor</a>
+    </div>
+</header>
+
+{% if monitor_count == 0 %}
+<article>
+    <h3>No monitors configured</h3>
+    <p>PageWatch is running and ready. Create your first monitor to start tracking website changes.</p>
+    <a href="/monitors/add" role="button">Add your first monitor</a>
+</article>
+{% else %}
+<div class="overflow-auto">
+    <table class="striped">
+        <thead>
+            <tr>
+                <th scope="col">Status</th>
+                <th scope="col">Name</th>
+                <th scope="col">URL</th>
+                <th scope="col">Interval</th>
+                <th scope="col">Last Checked</th>
+                <th scope="col">Last Changed</th>
+                <th scope="col" style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in monitors %}
+            <tr>
+                <td>
+                    <span class="dot dot-{{ m.status }}" title="Status: {{ m.status }}"></span>
+                    <strong>{{ m.status|upper }}</strong>
+                    {% if m.is_noisy %}
+                    <span class="badge-noisy" title="This page changes on every load.">Noisy</span>
+                    {% endif %}
+                    {% if m.status_message %}
+                    <br><small style="color: #7f8c8d; font-size: 0.75rem;">{{ m.status_message }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <strong><a href="/monitors/{{ m.id }}">{{ m.name }}</a></strong>
+                </td>
+                <td>
+                    <small><code>{{ m.url }}</code></small>
+                </td>
+                <td>
+                    {{ m.interval_minutes|format_interval }}
+                </td>
+                <td>
+                    <small>{{ m.last_checked_at|time_ago }}</small>
+                </td>
+                <td>
+                    <small>{{ m.last_changed_at|time_ago }}</small>
+                </td>
+                <td style="text-align: right;" class="actions-group">
+                    <form method="POST" action="/monitors/{{ m.id }}/check-now" style="display: inline; margin: 0;">
+                        <button type="submit" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.85rem; margin-right: 0.25rem;">Check Now</button>
+                    </form>
+                    <a href="/monitors/{{ m.id }}" role="button" class="secondary outline">View</a>
+                    <a href="/monitors/{{ m.id }}/edit" role="button" class="outline">Edit</a>
+                    <a href="/monitors/{{ m.id }}/delete" role="button" class="outline" style="color: #e74c3c; border-color: #e74c3c;">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<hr style="margin-top: 2.5rem; margin-bottom: 1.5rem;">
+
+<section style="margin-top: 1rem;">
+    <article style="padding: 1rem 1.25rem; margin-bottom: 1rem; background-color: var(--pico-card-background-color, #f8f9fa); border: 1px solid var(--pico-muted-border-color, #e5e7eb); border-radius: 6px;">
+        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; align-items: center;">
+            <div>
+                <small style="color: #7f8c8d; text-transform: uppercase; font-size: 0.75rem; font-weight: 600;">Scheduler</small>
+                <div>
+                    {% if scheduler_active %}
+                    <span class="dot dot-ok" title="Scheduler Active"></span>
+                    <strong style="color: #2ecc71;">Running</strong>
+                    {% else %}
+                    <span class="dot dot-error" title="Scheduler Inactive"></span>
+                    <strong style="color: #e74c3c;">Stopped</strong>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <small style="color: #7f8c8d; text-transform: uppercase; font-size: 0.75rem; font-weight: 600;">Queued Jobs</small>
+                <div><strong>{{ queued_count }}</strong></div>
+            </div>
+            <div>
+                <small style="color: #7f8c8d; text-transform: uppercase; font-size: 0.75rem; font-weight: 600;">Running Jobs</small>
+                <div><strong>{{ running_count }}</strong></div>
+            </div>
+            <div>
+                <small style="color: #7f8c8d; text-transform: uppercase; font-size: 0.75rem; font-weight: 600;">Failed (Last 24h)</small>
+                <div><strong>{{ failed_24h_count }}</strong></div>
+            </div>
+        </div>
+        {% if dev_fast_mode %}
+        <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed var(--pico-muted-border-color, #e5e7eb); display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem;">
+            <small style="color: #7f8c8d;">Dev Fast Mode:</small>
+            <form method="POST" action="/admin/send-digest-now" style="margin: 0;">
+                <button type="submit" class="outline secondary" style="padding: 0.2rem 0.6rem; font-size: 0.8rem;">Send Daily Digest Now (Demo)</button>
+            </form>
+        </div>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

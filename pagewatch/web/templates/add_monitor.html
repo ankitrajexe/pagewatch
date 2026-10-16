@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Add Monitor — PageWatch{% endblock %}
+
+{% block content %}
+<article>
+    <header>
+        <h2>Add a New Monitor</h2>
+        <p>Set up a webpage to monitor for changes.</p>
+    </header>
+
+    {% if errors %}
+    <div class="error-box">
+        <strong>Please fix the following errors:</strong>
+        <ul style="margin-bottom: 0;">
+            {% for err in errors %}
+            <li>{{ err }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/monitors/add">
+        <label for="name">
+            Monitor Name *
+            <input type="text" id="name" name="name" placeholder="e.g. Test Store Price Tracker" value="{{ form_data.name }}" required>
+            <small>A friendly name to identify this monitor.</small>
+        </label>
+
+        <label for="url">
+            Webpage URL *
+            <input type="text" id="url" name="url" placeholder="http://127.0.0.1:5001/ or https://example.com" value="{{ form_data.url }}" required>
+            <small>Must start with http:// or https://</small>
+        </label>
+
+        <div class="grid">
+            <div>
+                <label for="interval_minutes">
+                    Check Interval *
+                    <select id="interval_minutes" name="interval_minutes">
+                        {% for mins, label in intervals %}
+                        <option value="{{ mins }}" {% if form_data.interval_minutes == mins %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small>How often PageWatch will check the page.</small>
+                </label>
+            </div>
+            <div>
+                <label for="sensitivity">
+                    Sensitivity
+                    <select id="sensitivity" name="sensitivity">
+                        <option value="low" {% if form_data.sensitivity == 'low' %}selected{% endif %}>Low (>= 10% change)</option>
+                        <option value="medium" {% if form_data.sensitivity == 'medium' %}selected{% endif %}>Medium (>= 2% change, default)</option>
+                        <option value="high" {% if form_data.sensitivity == 'high' %}selected{% endif %}>High (any single line change)</option>
+                    </select>
+                    <small>Sensitivity threshold for meaningful changes.</small>
+                </label>
+            </div>
+        </div>
+
+        <details>
+            <summary><strong>Advanced Region Selectors (Optional)</strong></summary>
+            <div style="margin-top: 1rem;">
+                <label for="include_selectors">
+                    Regions to Watch (CSS Selectors)
+                    <textarea id="include_selectors" name="include_selectors" rows="3" placeholder="p.price&#10;div.main-content">{{ form_data.include_selectors }}</textarea>
+                    <small>One CSS selector per line. If empty, the entire visible page is watched.</small>
+                </label>
+
+                <label for="ignore_selectors">
+                    Regions to Ignore (CSS Selectors)
+                    <textarea id="ignore_selectors" name="ignore_selectors" rows="3" placeholder="div.banner&#10;footer">{{ form_data.ignore_selectors }}</textarea>
+                    <small>One CSS selector per line. Elements matching these will be stripped before comparing.</small>
+                </label>
+            </div>
+        </details>
+
+        <details style="margin-top: 1rem;">
+            <summary><strong>Keyword & Number Tracking (Optional)</strong></summary>
+            <div class="grid" style="margin-top: 1rem;">
+                <div>
+                    <label for="keyword">
+                        Keyword Filter
+                        <input type="text" id="keyword" name="keyword" placeholder="e.g. In Stock" value="{{ form_data.keyword }}">
+                        <small>Alert only if this word appears or disappears.</small>
+                    </label>
+                </div>
+                <div>
+                    <label for="number_selector">
+                        Number Selector
+                        <input type="text" id="number_selector" name="number_selector" placeholder="e.g. .price or #stock-count" value="{{ form_data.number_selector }}">
+                        <small>Track numeric values over time.</small>
+                    </label>
+                </div>
+            </div>
+            <div class="grid" style="margin-top: 0.5rem;">
+                <div>
+                    <label for="number_alert_below">
+                        Alert if Value Below
+                        <input type="number" step="any" id="number_alert_below" name="number_alert_below" placeholder="e.g. 500" value="{{ form_data.number_alert_below if form_data.number_alert_below is not none else '' }}">
+                        <small>Trigger threshold alert when value drops below this amount.</small>
+                    </label>
+                </div>
+                <div>
+                    <label for="number_alert_above">
+                        Alert if Value Above
+                        <input type="number" step="any" id="number_alert_above" name="number_alert_above" placeholder="e.g. 1000" value="{{ form_data.number_alert_above if form_data.number_alert_above is not none else '' }}">
+                        <small>Trigger threshold alert when value rises above this amount.</small>
+                    </label>
+                </div>
+            </div>
+        </details>
+
+        <details style="margin-top: 1rem; margin-bottom: 1.5rem;">
+            <summary><strong>Alert Destinations (Optional)</strong></summary>
+            <div style="margin-top: 1rem;">
+                <label for="alert_email">
+                    Alert Email
+                    <input type="email" id="alert_email" name="alert_email" placeholder="you@example.com" value="{{ form_data.alert_email }}">
+                </label>
+
+                <div class="grid">
+                    <div>
+                        <label for="telegram_chat_id">
+                            Telegram Chat ID
+                            <input type="text" id="telegram_chat_id" name="telegram_chat_id" placeholder="e.g. 123456789" value="{{ form_data.telegram_chat_id }}">
+                        </label>
+                    </div>
+                    <div>
+                        <label for="discord_webhook_url">
+                            Discord Webhook URL
+                            <input type="text" id="discord_webhook_url" name="discord_webhook_url" placeholder="https://discord.com/api/webhooks/..." value="{{ form_data.discord_webhook_url }}">
+                        </label>
+                    </div>
+                </div>
+
+                <label for="daily_digest">
+                    <input type="checkbox" id="daily_digest" name="daily_digest" value="1" {% if form_data.daily_digest %}checked{% endif %}>
+                    Send as Daily Digest (at 09:00 UTC) instead of instant alerts
+                </label>
+            </div>
+        </details>
+
+        <div class="grid">
+            <button type="submit">Create Monitor</button>
+            <a href="/" role="button" class="secondary outline">Cancel</a>
+        </div>
+    </form>
+</article>
+{% endblock %}

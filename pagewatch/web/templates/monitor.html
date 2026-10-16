@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}{{ monitor.name }} — PageWatch{% endblock %}
+
+{% block extra_head %}
+<link rel="alternate" type="application/rss+xml" title="{{ monitor.name }} RSS Feed" href="/monitors/{{ monitor.id }}/feed.xml">
+{% endblock %}
+
+{% block content %}
+<article>
+    <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+            <h2 style="margin-bottom: 0.25rem;">{{ monitor.name }}</h2>
+            <p style="margin-bottom: 0;">
+                <span class="dot dot-{{ monitor.status }}"></span>
+                <strong>{{ monitor.status|upper }}</strong>
+                {% if monitor.is_noisy %}
+                <span class="badge-noisy">Changes every load</span>
+                {% endif %}
+                {% if monitor.status_message %}
+                <small style="color: #e74c3c; margin-left: 0.5rem;">({{ monitor.status_message }})</small>
+                {% endif %}
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <a href="/monitors/{{ monitor.id }}/feed.xml" role="button" class="outline" style="padding: 0.35rem 0.8rem; font-size: 0.9rem;" target="_blank" rel="noopener">RSS Feed</a>
+            <form method="POST" action="/monitors/{{ monitor.id }}/check-now" style="margin: 0;">
+                <button type="submit" style="padding: 0.35rem 0.8rem; font-size: 0.9rem;">Check Now</button>
+            </form>
+            <form method="POST" action="/monitors/{{ monitor.id }}/test-alert" style="margin: 0;">
+                <button type="submit" class="secondary" style="padding: 0.35rem 0.8rem; font-size: 0.9rem;">Send Test Alert</button>
+            </form>
+            <a href="/monitors/{{ monitor.id }}/picker" role="button" class="outline" style="padding: 0.35rem 0.8rem; font-size: 0.9rem;">Visual Picker</a>
+            <a href="/monitors/{{ monitor.id }}/edit" role="button" class="outline" style="padding: 0.35rem 0.8rem; font-size: 0.9rem;">Edit</a>
+            <a href="/monitors/{{ monitor.id }}/delete" role="button" class="outline" style="color: #e74c3c; border-color: #e74c3c; padding: 0.35rem 0.8rem; font-size: 0.9rem;">Delete</a>
+        </div>
+    </header>
+
+    <div class="grid">
+        <div>
+            <h4>Target Webpage</h4>
+            <p><strong>URL:</strong> <a href="{{ monitor.url }}" target="_blank" rel="noopener">{{ monitor.url }}</a></p>
+            <p><strong>Domain:</strong> <code>{{ monitor.domain }}</code></p>
+            <p><strong>Check Interval:</strong> {{ monitor.interval_minutes|format_interval }}</p>
+            <p><strong>Sensitivity:</strong> {{ monitor.sensitivity|capitalize }}</p>
+            <p><strong>RSS Feed:</strong> <a href="/monitors/{{ monitor.id }}/feed.xml" target="_blank" rel="noopener">RSS 2.0 XML</a></p>
+        </div>
+        <div>
+            <h4>Timestamps & Status</h4>
+            <p><strong>Last Checked:</strong> {{ monitor.last_checked_at|time_ago }}</p>
+            <p><strong>Last Changed:</strong> {{ monitor.last_changed_at|time_ago }}</p>
+            <p><strong>Next Check:</strong> {{ monitor.next_check_at|time_ago }}</p>
+            <p><strong>Created:</strong> {{ monitor.created_at|time_ago }}</p>
+        </div>
+    </div>
+
+    <hr>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+        <h4 style="margin: 0;">Region Selectors</h4>
+        <a href="/monitors/{{ monitor.id }}/picker" style="font-size: 0.9rem;">Open Visual Region Picker &rarr;</a>
+    </div>
+    <div class="grid">
+        <div>
+            <p><strong>Included Regions (Watch):</strong></p>
+            {% if monitor.include_selectors %}
+            <pre><code>{{ monitor.include_selectors }}</code></pre>
+            {% else %}
+            <small style="color: #7f8c8d;">Entire page (default)</small>
+            {% endif %}
+        </div>
+        <div>
+            <p><strong>Ignored Regions:</strong></p>
+            {% if monitor.ignore_selectors %}
+            <pre><code>{{ monitor.ignore_selectors }}</code></pre>
+            {% else %}
+            <small style="color: #7f8c8d;">None (default)</small>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if monitor.alert_email or monitor.telegram_chat_id or monitor.discord_webhook_url %}
+    <hr>
+    <h4>Alert Channels</h4>
+    <ul>
+        {% if monitor.alert_email %}
+        <li><strong>Email:</strong> {{ monitor.alert_email }}</li>
+        {% endif %}
+        {% if monitor.telegram_chat_id %}
+        <li><strong>Telegram Chat ID:</strong> {{ monitor.telegram_chat_id }}</li>
+        {% endif %}
+        {% if monitor.discord_webhook_url %}
+        <li><strong>Discord Webhook:</strong> configured</li>
+        {% endif %}
+        <li><strong>Daily Digest:</strong> {{ "Yes" if monitor.daily_digest else "No" }}</li>
+    </ul>
+    {% endif %}
+
+    {% if monitor.number_selector %}
+    <hr>
+    <div style="margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">Number Tracking</h3>
+                <small style="color: #7f8c8d;">
+                    Watching CSS selector: <code>{{ monitor.number_selector }}</code>
+                </small>
+            </div>
+            {% if monitor.number_alert_below is not none or monitor.number_alert_above is not none %}
+            <div>
+                <small style="color: #555;">
+                    {% if monitor.number_alert_below is not none %}
+                    <span style="color: #e74c3c;">&bull; Alert below: <strong>{{ monitor.number_alert_below }}</strong></span>
+                    {% endif %}
+                    {% if monitor.number_alert_above is not none %}
+                    <span style="color: #e67e22; margin-left: 0.5rem;">&bull; Alert above: <strong>{{ monitor.number_alert_above }}</strong></span>
+                    {% endif %}
+                </small>
+            </div>
+            {% endif %}
+        </div>
+        <div style="text-align: center; background: #ffffff; padding: 1rem; border-radius: 8px; border: 1px solid #e1e8ed;">
+            <img src="/monitors/{{ monitor.id }}/chart.png" alt="Number Tracking Chart for {{ monitor.name }}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+        </div>
+    </div>
+    {% endif %}
+
+    <hr>
+
+    <!-- Version Timeline -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+            <h3 style="margin-bottom: 0;">Version Timeline</h3>
+            <small style="color: #7f8c8d;">Showing snapshots captured when content changed (newest first).</small>
+        </div>
+        {% if snapshots|length >= 2 %}
+        <div>
+            <a href="/monitors/{{ monitor.id }}/compare" role="button" class="outline" style="padding: 0.35rem 0.8rem; font-size: 0.85rem;">
+                Compare Any Two Versions &rarr;
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if not snapshots %}
+    <p><small style="color: #7f8c8d;">No snapshots captured yet. Click "Check Now" above to run the first check and create a baseline snapshot.</small></p>
+    {% else %}
+    <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
+        {% for s in snapshots %}
+        <article style="margin-bottom: 0; padding: 1rem 1.25rem; border-left: 4px solid {% if s.prev_id %}#2ecc71{% else %}#3498db{% endif %}; background-color: var(--pico-card-background-color, #f8f9fa);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div style="flex: 1; min-width: 220px;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                        <strong>Snapshot #{{ s.id }}</strong>
+                        <small style="color: #7f8c8d;">{{ s.taken_at|time_ago }} ({{ s.taken_at[:19] }})</small>
+                    </div>
+                    {% if s.summary %}
+                    <p style="margin-bottom: 0.4rem; font-size: 0.95rem; font-weight: 600; color: #2c3e50;">
+                        {{ s.summary }}
+                    </p>
+                    {% endif %}
+                    <p style="margin-bottom: 0.6rem; font-size: 0.9rem;">
+                        <strong>Hash:</strong> <code>{{ s.content_hash|short_hash }}</code> &bull;
+                        <small style="color: #7f8c8d;">{{ s.text_length }} chars</small>
+                    </p>
+                    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        {% if s.compare_url %}
+                        <a href="{{ s.compare_url }}" role="button" style="padding: 0.25rem 0.65rem; font-size: 0.82rem; background-color: #2ecc71; border-color: #2ecc71; color: white;">
+                            {{ s.diff_summary }} &rarr;
+                        </a>
+                        {% else %}
+                        <span style="display: inline-block; padding: 3px 8px; background-color: #3498db; color: white; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
+                            {{ s.diff_summary }}
+                        </span>
+                        {% endif %}
+                        <a href="/data/texts/{{ s.text_filename }}" target="_blank" role="button" class="outline secondary" style="padding: 0.25rem 0.6rem; font-size: 0.82rem;">View Text</a>
+                    </div>
+                </div>
+                <div>
+                    <a href="{{ s.compare_url or '/data/screenshots/' ~ s.screenshot_filename }}" title="Snapshot #{{ s.id }}">
+                        <img src="/data/screenshots/{{ s.screenshot_filename }}"
+                             alt="Snapshot #{{ s.id }} Thumbnail"
+                             style="width: 140px; height: auto; border: 1px solid var(--pico-muted-border-color, #ccc); border-radius: 4px; display: block; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                    </a>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <hr>
+
+
+    <!-- Check Log (Last 20) -->
+    <h3>Recent Check Log (Last 20)</h3>
+    {% if not check_logs %}
+    <p><small style="color: #7f8c8d;">No checks recorded yet.</small></p>
+    {% else %}
+    <div class="overflow-auto">
+        <table class="striped">
+            <thead>
+                <tr>
+                    <th scope="col">Time</th>
+                    <th scope="col">Outcome</th>
+                    <th scope="col">HTTP Status</th>
+                    <th scope="col">Duration</th>
+                    <th scope="col">Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in check_logs %}
+                <tr>
+                    <td>{{ log.checked_at|time_ago }} <small style="color: #7f8c8d;">({{ log.checked_at[:19] }})</small></td>
+                    <td>
+                        {% if log.outcome == 'changed' %}
+                        <span style="color: #27ae60; font-weight: bold;">CHANGED</span>
+                        {% elif log.outcome == 'unchanged' %}
+                        <span style="color: #7f8c8d;">UNCHANGED</span>
+                        {% elif log.outcome == 'error' %}
+                        <span style="color: #c0392b; font-weight: bold;">ERROR</span>
+                        {% else %}
+                        <span>{{ log.outcome|upper }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.http_status or '-' }}</td>
+                    <td>{{ log.duration_ms }} ms</td>
+                    <td>{{ log.message }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <footer style="margin-top: 2rem;">
+        <a href="/" role="button" class="secondary outline">← Back to Dashboard</a>
+    </footer>
+</article>
+{% endblock %}

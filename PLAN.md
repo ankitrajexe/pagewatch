@@ -2,17 +2,18 @@
 
 This file is the single source of truth. Read it fully before writing any code. If a request in chat conflicts with this file, ask me before deviating.
 
-## 0. About the developer (read this first)
+## 0. Code style (read first)
 
-- I am a beginner. I only know basic Python (class level). I do NOT know JavaScript and I am weak at web development.
-- Write simple, readable Python. No clever one-liners, no metaclasses, no decorators beyond what Flask needs, no async/await.
-- Every file starts with a short comment block: what this file does, and which other files it talks to.
-- Every function has a 1 to 3 line docstring in plain English.
-- Use clear function names (`fetch_page`, `normalize_text`, `save_snapshot`), not abbreviations.
-- Avoid JavaScript entirely, except in the optional last step (visual picker), and there keep it under 80 lines, heavily commented.
-- Do not add libraries that are not listed in section 2 without asking me first.
-- After finishing any step, explain in simple words (Hinglish is fine) what you built and how to run and test it.
-
+- I am a beginner who knows basic Python. Write the way a student with 6 months of Python would: plain and straightforward code.
+- Comments: only where the logic is not obvious, short, lowercase is fine, one line. No docstrings on small functions. No comment that just repeats the code (like "# increment counter").
+- No file header comment blocks, no section banners (no "# ===== HELPERS ====="), no emojis anywhere, including logs and UI text.
+- Names: short and ordinary (get_page, save_snapshot, old_text). No very long descriptive names, no names like "process_and_validate_input_data".
+- Do not over-engineer: no abstract base classes, no custom exception hierarchies, no type hints everywhere, no dataclasses unless needed. Simple functions and dicts are fine.
+- Do not wrap every line in try/except. Handle errors only where something can really fail (network, files, parsing).
+- Messages shown to users and log lines should be short and plain ("check failed: timeout"), not polished sentences.
+- Keep functions under about 30 lines. Prefer plain loops over clever comprehensions when the comprehension is hard to read.
+- Leave a few simple TODO notes for things I might improve later, only where true.
+- After each step, still explain the code to me in simple Hinglish so I understand it.
 ## 1. Goal
 
 Build a service that monitors public web pages and alerts users to meaningful changes while ignoring noise.

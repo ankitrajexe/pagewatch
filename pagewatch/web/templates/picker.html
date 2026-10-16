@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Visual Region Picker — {{ monitor.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.picker-box {
+    position: absolute;
+    border: 1px dashed rgba(52, 152, 219, 0.45);
+    background-color: rgba(52, 152, 219, 0.05);
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.picker-box:hover {
+    border: 2px solid #e74c3c !important;
+    background-color: rgba(231, 76, 60, 0.25) !important;
+    z-index: 50;
+}
+.picker-box.selected {
+    border: 2px solid #2ecc71 !important;
+    background-color: rgba(46, 204, 113, 0.35) !important;
+    z-index: 60;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<article style="margin-bottom: 1.5rem;">
+    <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+            <h2 style="margin-bottom: 0.25rem;">Visual Region Picker</h2>
+            <p style="margin-bottom: 0; color: #7f8c8d;">
+                Monitor: <strong>{{ monitor.name }}</strong> &bull;
+                <a href="{{ monitor.url }}" target="_blank" rel="noopener">{{ monitor.url }}</a>
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <form method="POST" action="/monitors/{{ monitor.id }}/picker/refresh" style="margin: 0;">
+                <button type="submit" class="outline secondary" style="padding: 0.35rem 0.8rem; font-size: 0.9rem;">↻ Refresh Preview</button>
+            </form>
+            <a href="/monitors/{{ monitor.id }}" role="button" class="outline" style="padding: 0.35rem 0.8rem; font-size: 0.9rem;">Back to Monitor</a>
+        </div>
+    </header>
+
+    <!-- Current Selectors Overview with plain HTML form delete buttons -->
+    <div class="grid" style="margin-top: 1rem;">
+        <div>
+            <h4 style="margin-bottom: 0.5rem;">Watched Regions (Include)</h4>
+            <small style="color: #7f8c8d; display: block; margin-bottom: 0.5rem;">
+                Only content inside these selectors will be monitored.
+            </small>
+            {% if include_list %}
+            <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                {% for sel in include_list %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.6rem; background: var(--pico-card-background-color, #fff); border: 1px solid var(--pico-muted-border-color, #e1e8ed); border-radius: 4px;">
+                    <code style="word-break: break-all;">{{ sel }}</code>
+                    <form method="POST" action="/monitors/{{ monitor.id }}/picker/remove" style="margin: 0; margin-left: 0.5rem;">
+                        <input type="hidden" name="selector_type" value="include">
+                        <input type="hidden" name="selector" value="{{ sel }}">
+                        <button type="submit" class="outline" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; color: #e74c3c; border-color: #e74c3c; margin: 0;">Remove</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <small style="color: #7f8c8d;">Entire page is currently being watched.</small>
+            {% endif %}
+        </div>
+
+        <div>
+            <h4 style="margin-bottom: 0.5rem;">Ignored Regions</h4>
+            <small style="color: #7f8c8d; display: block; margin-bottom: 0.5rem;">
+                Content inside these selectors will be stripped out before checking.
+            </small>
+            {% if ignore_list %}
+            <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                {% for sel in ignore_list %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.6rem; background: var(--pico-card-background-color, #fff); border: 1px solid var(--pico-muted-border-color, #e1e8ed); border-radius: 4px;">
+                    <code style="word-break: break-all;">{{ sel }}</code>
+                    <form method="POST" action="/monitors/{{ monitor.id }}/picker/remove" style="margin: 0; margin-left: 0.5rem;">
+                        <input type="hidden" name="selector_type" value="ignore">
+                        <input type="hidden" name="selector" value="{{ sel }}">
+                        <button type="submit" class="outline" style="padding: 0.15rem 0.45rem; font-size: 0.75rem; color: #e74c3c; border-color: #e74c3c; margin: 0;">Remove</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <small style="color: #7f8c8d;">No regions are currently ignored.</small>
+            {% endif %}
+        </div>
+    </div>
+</article>
+
+<!-- Sticky Selection Toolbar -->
+<div style="position: sticky; top: 0; z-index: 100; background: var(--pico-card-background-color, #ffffff); padding: 0.75rem 1rem; border: 1px solid var(--pico-muted-border-color, #ccd); border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="flex: 1; min-width: 280px;">
+            <div id="selected-selector-display" style="font-size: 0.95rem;">
+                <span style="color: #7f8c8d;">Click any highlighted box on the screenshot below to select an element.</span>
+            </div>
+        </div>
+        <div>
+            <form id="picker-add-form" method="POST" action="/monitors/{{ monitor.id }}/picker/add" style="margin: 0; display: flex; gap: 0.5rem;">
+                <input type="hidden" name="selector" id="selected-selector" value="">
+                <button type="submit" name="selector_type" value="include" id="btn-watch" disabled style="padding: 0.35rem 0.85rem; font-size: 0.9rem; background-color: #2ecc71; border-color: #2ecc71; color: white;">
+                    Watch this region
+                </button>
+                <button type="submit" name="selector_type" value="ignore" id="btn-ignore" class="secondary" disabled style="padding: 0.35rem 0.85rem; font-size: 0.9rem; background-color: #e74c3c; border-color: #e74c3c; color: white;">
+                    Ignore this region
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Screenshot Viewer with Overlays -->
+<article style="padding: 0.75rem;">
+    <div style="overflow-x: auto; background: #eef2f5; border: 1px solid #ccd; border-radius: 6px; padding: 1rem; text-align: center;">
+        <div id="canvas-container" style="display: inline-block; position: relative; width: {{ image_width }}px; height: {{ image_height }}px; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <img src="{{ screenshot_url }}" width="{{ image_width }}" height="{{ image_height }}" alt="Page screenshot for region selection" style="display: block; width: {{ image_width }}px; height: {{ image_height }}px;">
+            {% for el in elements %}
+            <div class="picker-box"
+                 data-selector="{{ el.selector }}"
+                 style="left: {{ el.x }}px; top: {{ el.y }}px; width: {{ el.w }}px; height: {{ el.h }}px;"
+                 title="{{ el.selector }}">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</article>
+
+<script>
+// Wait for the HTML document to finish loading in the browser
+document.addEventListener("DOMContentLoaded", function () {
+    // Get the hidden input where the selected CSS selector is stored
+    var selectorInput = document.getElementById("selected-selector");
+    // Get the Watch Region button
+    var watchButton = document.getElementById("btn-watch");
+    // Get the Ignore Region button
+    var ignoreButton = document.getElementById("btn-ignore");
+    // Get the text element where the selector name is displayed
+    var displayEl = document.getElementById("selected-selector-display");
+    // Find all transparent overlay boxes on the screenshot
+    var boxes = document.querySelectorAll(".picker-box");
+    // Variable to track the currently clicked overlay box
+    var activeBox = null;
+
+    // Loop through every overlay box on the page
+    boxes.forEach(function (box) {
+        // Listen for user clicks on this overlay box
+        box.addEventListener("click", function (evt) {
+            // Stop click event from bubbling up to parents
+            evt.stopPropagation();
+            // Read the unique CSS selector stored on the box
+            var selector = box.getAttribute("data-selector");
+            // If another box was previously active, remove its green highlight
+            if (activeBox) {
+                // Remove the selected CSS class from the previous box
+                activeBox.classList.remove("selected");
+            }
+            // Set this clicked box as the active box
+            activeBox = box;
+            // Add the selected CSS class so this box turns green
+            box.classList.add("selected");
+            // Write the selector string into the hidden form field
+            selectorInput.value = selector;
+            // Show the selector name in the toolbar
+            displayEl.innerHTML = "<strong>Selected:</strong> <code>" + selector + "</code>";
+            // Enable the Watch Region button
+            watchButton.disabled = false;
+            // Enable the Ignore Region button
+            ignoreButton.disabled = false;
+        });
+    });
+});
+</script>
+{% endblock %}
